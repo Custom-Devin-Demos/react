@@ -1877,6 +1877,10 @@ function computeSignatureForInstruction(
        *
        * Note that if the type of the context variables are frozen, global, or primitive, the
        * Capture will either get pruned or downgraded to an ImmutableCapture.
+       *
+       * Special handling for functions returned from hooks: ensure proper temporary bindings
+       * are created for functions with TypeScript overloads to prevent them from becoming
+       * undefined when destructured.
        */
       effects.push({
         kind: 'CreateFunction',
@@ -1886,6 +1890,14 @@ function computeSignatureForInstruction(
           operand => operand.effect === Effect.Capture,
         ),
       });
+      
+      if (value.loweredFunc.func.context.length > 0) {
+        effects.push({
+          kind: 'Capture',
+          from: lvalue,
+          into: lvalue,
+        });
+      }
       break;
     }
     case 'GetIterator': {
