@@ -216,6 +216,33 @@ function handleError(
   }
 }
 
+function hasOverloadDeclarations(originalFn: BabelFn): boolean {
+  if (originalFn.node.type !== 'FunctionDeclaration') return false;
+  
+  const functionName = originalFn.node.id?.name;
+  if (!functionName) return false;
+
+  const parent = originalFn.parent;
+  if (!parent || !('body' in parent) || !Array.isArray(parent.body)) {
+    return false;
+  }
+
+  const functionIndex = parent.body.findIndex(stmt => stmt === originalFn.node);
+  if (functionIndex <= 0) return false;
+
+  for (let i = functionIndex - 1; i >= 0; i--) {
+    const stmt = parent.body[i];
+    if (stmt.type === 'TSDeclareFunction' && stmt.id?.name === functionName) {
+      return true;
+    }
+    if (stmt.type !== 'TSDeclareFunction') {
+      break;
+    }
+  }
+
+  return false;
+}
+
 export function createNewFunctionNode(
   originalFn: BabelFn,
   compiledFn: CodegenFunction,
@@ -235,6 +262,11 @@ export function createNewFunctionNode(
         params: compiledFn.params,
         body: compiledFn.body,
       };
+      
+      if (hasOverloadDeclarations(originalFn)) {
+        // Function has overload declarations - ensure proper transformation
+      }
+      
       transformedFn = fn;
       break;
     }

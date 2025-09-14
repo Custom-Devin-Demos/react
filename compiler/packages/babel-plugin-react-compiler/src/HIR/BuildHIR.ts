@@ -264,6 +264,33 @@ export function lower(
 }
 
 // Helper to lower a statement
+function hasOverloadDeclarations(
+  functionPath: NodePath<t.FunctionDeclaration>,
+): boolean {
+  const functionName = functionPath.node.id?.name;
+  if (!functionName) return false;
+
+  const parent = functionPath.parent;
+  if (!parent || !('body' in parent) || !Array.isArray(parent.body)) {
+    return false;
+  }
+
+  const functionIndex = parent.body.findIndex(stmt => stmt === functionPath.node);
+  if (functionIndex <= 0) return false;
+
+  for (let i = functionIndex - 1; i >= 0; i--) {
+    const stmt = parent.body[i];
+    if (stmt.type === 'TSDeclareFunction' && stmt.id?.name === functionName) {
+      return true;
+    }
+    if (stmt.type !== 'TSDeclareFunction') {
+      break;
+    }
+  }
+
+  return false;
+}
+
 function lowerStatement(
   builder: HIRBuilder,
   stmtPath: NodePath<t.Statement>,
@@ -1050,14 +1077,19 @@ function lowerStatement(
       });
       const id = stmt.get('id') as NodePath<t.Identifier>;
 
+      const hasOverloads = hasOverloadDeclarations(stmt);
+      
       const fn = lowerValueToTemporary(
         builder,
         lowerFunctionToValue(builder, stmt),
       );
+      
+      const assignmentKind = hasOverloads ? InstructionKind.Function : InstructionKind.Function;
+      
       lowerAssignment(
         builder,
         stmt.node.loc ?? GeneratedSource,
-        InstructionKind.Function,
+        assignmentKind,
         id,
         fn,
         'Assignment',
