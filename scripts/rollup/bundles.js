@@ -121,7 +121,7 @@ const bundles = [
 
   /******* Compiler Runtime *******/
   {
-    bundleTypes: [NODE_DEV, NODE_PROD, NODE_PROFILING],
+    bundleTypes: [NODE_DEV, NODE_PROD, NODE_PROFILING, ESM_DEV, ESM_PROD],
     moduleType: ISOMORPHIC,
     entry: 'react/compiler-runtime',
     global: 'CompilerRuntime',
